@@ -85,8 +85,8 @@ class Server:
         P.S. I also haven't calculated the exact latency in ms.
         """
         try:
-            cmd = ("gst-launch-1.0 v4l2src device={} ! video/x-raw,width=640,height=480 ".format(self.device) +
-                   "! x264enc bitrate=100000 speed-preset=1 tune=zerolatency intra-refresh-true! rtph264pay pt=96 ! udpsink host={} port={}".format(ip, port))
+            cmd = ('gst-launch-1.0 -v v4l2src device={} ! videoconvert ! "video/x-raw,width=640,height=480" '.format(self.device) +
+                   '! x264enc bitrate=100000 speed-preset=1 tune=zerolatency intra-refresh-true! rtph264pay pt=96 ! udpsink host={} port={}'.format(ip, port))
         except ValueError:
             logging.info("Unknown mode")
         print(cmd)

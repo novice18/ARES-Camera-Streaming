@@ -1,5 +1,4 @@
 import subprocess
-from enum import Enum
 import socket
 import re
 from contextlib import closing
@@ -11,8 +10,6 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 
 class RemoteViewer:
-    OUTPUT = Enum("OUTPUT", "OPENCV WINDOW")
-
     def get_my_ip(self):
         # a = subprocess.run('ifconfig',capture_output=1)
         # capture_output is only in python 3.7 and above

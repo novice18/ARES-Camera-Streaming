@@ -15,7 +15,6 @@ class Publisher:
 
         self.broadcast_ip = "127.0.0.1"
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        # self.broadcast_ip = "192.168.1.43"
 
         self.sock.settimeout(0.2)
         self.sock.connect((self.broadcast_ip, port))

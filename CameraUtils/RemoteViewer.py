@@ -1,10 +1,10 @@
 import subprocess
-import shlex
 from enum import Enum
 import socket
 import re
 from contextlib import closing
 from UDPsockets.Publisher import Publisher, REQUEST_PORT
+from CameraUtils.ProcessMonitor import ProcessMonitor
 import logging
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
@@ -16,30 +16,27 @@ class RemoteViewer:
     def get_my_ip(self):
         # a = subprocess.run('ifconfig',capture_output=1)
         # capture_output is only in python 3.7 and above
-        m = None
+        ip = None
         try:
-            a = subprocess.run(
-                'ifconfig', stdout=subprocess.PIPE).stdout.strip()
-            m = re.search(b"192\.168\.1\.[0-9][0-9][0-9]", a)
+            ifconfigAll = subprocess.run(
+                'ifconfig', shell=True, stdout=subprocess.PIPE).stdout.strip()
+            ip = re.findall(b"192\.168\.1\.[0-9][0-9]?[0-9]?",
+                            ifconfigAll)[0].decode("utf-8")
+            logging.info("IP: {}".format(ip))
+
         except FileNotFoundError:
-            a = b"127\.0\.0\.1"
+            logging.error("Couldn't find IP. Check if net-tools is installed.")
+            ip = "127.0.0.1"
 
-        if m is not None:
-            return m.group()
-        else:
-            print("Can't find my ip on robot network!")
-            return None
+        return ip
 
-    def __init__(self, mode=None):
-        if mode is not None:
-            mode = self.OUTPUT.WINDOW
-        self.mode = mode
+    def __init__(self):
         self.pub = Publisher(REQUEST_PORT)
 
         self.ip = self.get_my_ip()
         self.resolution = (320, 240)
 
-        self.process = None
+        self.process = ProcessMonitor()
         self.remote_host = None
         self.camera_name = None
 
@@ -71,7 +68,7 @@ class RemoteViewer:
     def open(self):
         port = self.get_free_port()
         if self.remote_host is None:
-            logging.info("Error")
+            logging.error("Get host")
             return
 
         self.pub.send({"ip": self.ip,
@@ -80,57 +77,22 @@ class RemoteViewer:
                        "port": port,
                        "name": self.camera_name})
 
-        if self.mode == self.OUTPUT.WINDOW:
-            # caps="application/x-rtp" is what makes things slow.
-            # replaces with gdppay
-            cmd = 'gst-launch-1.0 udpsrc port={} caps="application/x-rtp", payload=96 ! rtph264depay ! avdec_h264 ! autovideosink sync=false'.format(
-                port)
-            # cmd = 'gst-launch-1.0 udpsrc port={} ! gdpdepay ! rtph264depay ! avdec_h264 ! autovideosink sync=false'.format(port)
-            args = shlex.split(cmd)
-            # shell = True need to open a window. $DISPLAY needs to be set?
-            # print(args)
-            # self.process = subprocess.Popen(cmd, shell=True)
-            self.process = subprocess.Popen(args)
+        # maybe using gdppay instead of rtppay would be faster
+        # BUUUT gdp doesn't seem to work on my laptop so let's play safe
+        cmd = ('gst-launch-1.0 ' +
+               'udpsrc port={} '.format(port) +
+               '! application/x-rtp ' +
+               '! rtph264depay ' +
+               '! h264parse ! avdec_h264 ' +
+               '! xvimagesink sync=false')
 
-        elif self.mode == self.OUTPUT.OPENCV:
-            arg = 'gst-launch-1.0 udpsrc port={} caps="application/x-rtp", payload=96 ! rtph264depay ! avdec_h264 ! fdsink sync=false'.format(
-                port)
-            # cmd = 'gst-launch-1.0 udpsrc port={} ! gdpdepay ! rtph264depay ! avdec_h264 ! fdsink'
-            self.process = subprocess.Popen(
-                arg, shell=True, stdout=subprocess.PIPE)
-
-    """def __del__(self):
-        self.close()
-"""
+        self.process.start(cmd)
 
     def stream(self, hostname, camera_name=None):
         self.remote_host = hostname
         self.camera_name = camera_name
         self.open()
 
-        if self.mode == self.OUTPUT.WINDOW:
-            self.monitor(loop=True)
-
     def read(self):
         # self.monitor(loop= False)
         return self.process.stdout.read(320 * 240 * 3)
-
-    def monitor(self, loop=True):
-        # TODO
-        arg = logging.info("Check")
-
-        if loop:
-            while 1:
-                self.process.wait()
-                self.process = subprocess.Popen(
-                    arg, shell=True, stdout=subprocess.PIPE)
-                self.open()
-
-        else:
-            if self.process.poll():
-                return
-            else:
-                self.process = subprocess.Popen(
-                    arg, shell=True, stdout=subprocess.PIPE)
-                self.open()
-                # resend request

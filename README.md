@@ -10,4 +10,4 @@ On the client (viewing host), run:
 python3 camera.py viewer [hostname]
 ```
 where [hostname] is the output you get when you run ```hostname``` in the terminal.
-P.S. Don't forget to remove the sqaure brackets. They're just a connotation I use for variables.
+P.S. Don't forget to remove the square brackets. They're just a connotation I use for variables.

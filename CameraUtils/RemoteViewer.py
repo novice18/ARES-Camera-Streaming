@@ -11,13 +11,11 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 class RemoteViewer:
     def get_my_ip(self):
-        # a = subprocess.run('ifconfig',capture_output=1)
-        # capture_output is only in python 3.7 and above
         ip = None
         try:
             ifconfigAll = subprocess.run(
                 'ifconfig', shell=True, stdout=subprocess.PIPE).stdout.strip()
-            ip = re.findall(b"192\.168\.1\.[0-9][0-9]?[0-9]?",
+            ip = re.findall(b"192\.168\.[0-5]\.[0-9][0-9]?[0-9]?",
                             ifconfigAll)[0].decode("utf-8")
             logging.info("IP: {}".format(ip))
 
